@@ -36,9 +36,15 @@ Thanks to Composer, this project can be easily integrated and encapsulated into 
 
 ## <a name="quickinstall-link"></a>QUICK INSTALL via Composer
 
-- Install phpdocker running
+- Install phpdocker running  
+
 ```
 composer global require lombax85/phpdocker
+```
+- If you want to update it instead, run
+
+```
+composer global update lombax85/phpdocker
 ```
 
 This command will install phpdocker globally for your user.
