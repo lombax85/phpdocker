@@ -1,0 +1,5 @@
+{
+    "name": "lombax85/phpdocker",
+    "bin": ["bin/phpdocker"],
+    "minimum-stability": "dev"
+}
