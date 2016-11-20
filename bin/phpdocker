@@ -1,18 +1,26 @@
 #!/usr/bin/env php
 <?php
 
+define("CONFIGURATION_AUTOLOADERS", "com.lombax.phpdocker.configuration.autoloaders");
+define("CONFIGURATION_AVAILABLECOMMANDS", "com.lombax.phpdocker.configuration.availablecommands");
+define("CONFIGURATION_DEFAULTENVFILE", "com.lombax.phpdocker.configuration.defaultenvfile");
+define("CONFIGURATION_EXECUTABLENAME", "com.lombax.phpdocker.configuration.executablename");
+define("CONFIGURATION_EXECUTABLENAMEDEV", "com.lombax.phpdocker.configuration.executablenamedev");
+define("CONFIGURATION_DOCKERDIRNAME", "com.lombax.phpdocker.configuration.dockerdirname");
+
 $configuration = [
 
-    'autoloaders' =>    [   __DIR__.'/../../autoload.php',
-                            __DIR__.'/vendor/autoload.php',
-
-                        ],
-
+    CONFIGURATION_AUTOLOADERS           =>  [   __DIR__.'/../../autoload.php',
+                                                __DIR__.'/vendor/autoload.php', ],
+    CONFIGURATION_AVAILABLECOMMANDS     =>  ['dockerize'],
+    CONFIGURATION_DEFAULTENVFILE        =>  '.env.example',
+    CONFIGURATION_EXECUTABLENAME        =>  'phpdocker',
+    CONFIGURATION_EXECUTABLENAMEDEV     =>  'phpdocker-test',
+    CONFIGURATION_DOCKERDIRNAME         =>  'docker',
 ];
 
-// autoload composer global
-
-foreach ($configuration['autoloaders'] as $autoloader)
+// require composer global autoloader
+foreach ($configuration[CONFIGURATION_AUTOLOADERS] as $autoloader)
 {
     if (file_exists($autoloader))
     {
@@ -20,9 +28,6 @@ foreach ($configuration['autoloaders'] as $autoloader)
     }
 }
 
-
-
-$availableCommands = ["start", "stop", "restart", "dockerize"];
 
 // First filter, need at least one parameters
 if (count($argv) <= 1)
@@ -35,7 +40,7 @@ if (count($argv) <= 1)
 
 // Second filter, check for valid params
 $command = $argv[1];
-if (!in_array($command, $availableCommands))
+if (!in_array($command, $configuration[CONFIGURATION_AVAILABLECOMMANDS]))
 {
     help();
     shutdown();
@@ -43,32 +48,28 @@ if (!in_array($command, $availableCommands))
     die();
 }
 
-
+// call the command
 call_user_func($command);
 
+
+
 // MAIN COMMANDS
-
-function start()
-{
-    res("start");
-}
-
-function stop()
-{
-    res("stop");
-}
-
-function restart()
-{
-    stop();
-    start();
-}
-
 function dockerize()
 {
-    res("dockerize");
-}
+    $executableName = getExecutableName();
+    $source = getSource();
+    $destination = getDestination();
 
+    if (file_exists($destination))
+    {
+        res("A docker directory already exists in $destination, delete it and execute the command again");
+        return;
+    }
+    copyRecursive($source, $destination);
+    res("Created docker directory inside $destination");
+    createEnvFile($destination);
+    res("Created default .env file inside $destination");
+}
 
 // HELPER FUNCTIONS
 function res($val)
@@ -78,10 +79,79 @@ function res($val)
 
 function help()
 {
-    res("Valid commands: dockerize, start, stop, restart");
+    res("Usage: phpdocker dockerize");
+    res("NOTE: this command won't overwrite the content of the ./docker directory if exists, delete it manually if you need.");
 }
 
 function shutdown()
 {
     die();
+}
+
+function getSource()
+{
+    $source = dirname(__DIR__);
+    return $source;
+}
+
+function getDestination()
+{
+    global $configuration;
+
+    $dockerDirectory = $configuration[CONFIGURATION_DOCKERDIRNAME];
+    $destination = getcwd();
+    $destination .= "/$dockerDirectory";
+    return $destination;
+}
+
+function getExecutableName()
+{
+    global $argv;
+    $name = basename($argv[0]);
+    return $name;
+}
+
+function isDev()
+{
+    global $configuration;
+    if (getExecutableName() == $configuration[CONFIGURATION_EXECUTABLENAMEDEV])
+    {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+function copyRecursive($src,$dst) {
+    $dir = opendir($src);
+    @mkdir($dst);
+    while(false !== ( $file = readdir($dir)) ) {
+        if (( $file != '.' ) && ( $file != '..' )) {
+            if ( is_dir($src . '/' . $file) ) {
+                copyRecursive($src . '/' . $file,$dst . '/' . $file);
+            }
+            else {
+                copy($src . '/' . $file,$dst . '/' . $file);
+            }
+        }
+    }
+    closedir($dir);
+}
+
+function createEnvFile($destination)
+{
+    global $configuration;
+    // read the example file
+    $read = file_get_contents(getSource()."/".$configuration[CONFIGURATION_DEFAULTENVFILE]);
+
+    // replace the project name
+    // timestamp
+    $date = new DateTime();
+    $ts = $date->getTimestamp();
+
+    //replace the project name with a unique one
+    $read = str_replace("COMPOSE_PROJECT_NAME=docker", "COMPOSE_PROJECT_NAME=docker_".$ts, $read);
+
+    // write the file
+    file_put_contents($destination."/.env", $read);
 }
