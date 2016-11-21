@@ -150,7 +150,7 @@ couchdb
 
 ## <a name="troubleshooting-link"></a>ADDITIONAL SETUP and Troubleshooting
 - on mac: if the root folder of your project is not already shared, enable file sharing on `./docker_data` and `./docker` folders.
-
+- if you want to see the error log of Apache/MySQL, you can simply omit the `-d` switch from the `docker-compose up` command. Doing this, will show you the stdout of the containers. The final command will be: `docker-compose up apache2 mysql mongo couchdb`
 
 ## <a name="actualissues-link"></a>ACTUAL ISSUES
 
